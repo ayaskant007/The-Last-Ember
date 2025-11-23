@@ -82,6 +82,27 @@ style frame:
 ################################################################################
 
 
+## Ending Screen
+screen ending_display(title, message, bg_image):
+    add bg_image
+    
+    frame:
+        xalign 0.5
+        yalign 0.5
+        background "#000000aa"
+        padding (50, 50)
+        vbox:
+            spacing 30
+            xalign 0.5
+            
+            text title size 80 bold True color "#ffffff" outlines [(3, "#000000", 0, 0)] xalign 0.5
+            text message size 40 color "#cccccc" xalign 0.5 text_align 0.5
+            
+            null height 50
+            
+            textbutton "Return to Main Menu" action Return() xalign 0.5
+
+
 ## Say screen ##################################################################
 ##
 ## The say screen is used to display dialogue to the player. It takes two
@@ -135,7 +156,7 @@ style window:
     yalign gui.textbox_yalign
     ysize gui.textbox_height
 
-    background Image("gui/textbox.png", xalign=0.5, yalign=1.0)
+    background Frame(Solid("#1a1a1acc"), gui.frame_borders, tile=gui.frame_tile)
 
 style namebox:
     xpos gui.name_xpos

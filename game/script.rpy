@@ -27,23 +27,30 @@ transform bg_fill:
     size (1920, 1080)
     fit "cover"
 
+# Character Transforms
+transform zoomed_center:
+    xalign 0.5
+    yalign 1.0
+    zoom 1.3
+
 # Images
 image bg wasteland = At("images/bg_frozen_wasteland.png", bg_fill)
 image bg shelter = At("images/bg_shelter_interior.png", bg_fill)
 image bg storage = At("images/bg_storage_room.png", bg_fill)
 image bg entrance = At("images/bg_entrance_door.png", bg_fill)
 
-image elara neutral = "images/elara_neutral.png"
-image elara sad = "images/elara_sad.png"
+image elara neutral = At("images/elara_neutral.png", zoomed_center)
+image elara sad = At("images/elara_sad.png", zoomed_center)
 
 # Game variables
-default warmth = 60
-default hope = 60
+default warmth = 50 # Reduced from 60
+default hope = 50 # Reduced from 60
 default day = 1
 default max_days = 5  # Extended game length
 default current_room = "main_hall"
 default actions_taken = 0
 default max_actions_per_day = 2
+default inventory = []
 
 # --- Styles ---
 style bar_warmth:
@@ -121,6 +128,21 @@ screen exploration_ui():
             null height 10
             textbutton "End Day (Rest)" action Jump("night_phase") text_color "#ffaaaa"
 
+    # Inventory UI
+    frame:
+        xalign 0.5
+        yalign 0.98
+        background "#000000aa"
+        padding (20, 10)
+        hbox:
+            spacing 15
+            text "Inventory:" color "#ffffff" size 22
+            if not inventory:
+                text "Empty" color "#888888" size 22
+            else:
+                for item in inventory:
+                    text "[item]" color "#ffff00" size 22
+
 # --- Game Start ---
 
 label start:
@@ -190,10 +212,22 @@ label action_talk_elara:
 
 label action_tend_fire:
     $ actions_taken += 1
-    $ warmth += 10
     scene bg shelter
     show fire_overlay at flicker_anim
-    "You carefully arrange the embers to maximize the heat."
+    
+    if "Wood" in inventory:
+        menu:
+            "Burn the Wood (+20 Warmth)":
+                $ inventory.remove("Wood")
+                $ warmth += 20
+                "The dry wood catches quickly, roaring with life."
+            "Just tend the embers (+5 Warmth)":
+                $ warmth += 5
+                "You carefully arrange the embers to maximize the heat."
+    else:
+        $ warmth += 5
+        "You carefully arrange the embers to maximize the heat."
+        
     jump check_actions
 
 label action_search_fuel:
@@ -202,7 +236,8 @@ label action_search_fuel:
     "You scour the empty shelves."
     $ roll = renpy.random.randint(1, 10)
     if roll > 6:
-        "You found some old wooden crates! (Warmth +)"
+        "You found some old wooden crates!"
+        $ inventory.append("Wood")
         $ warmth += 15
     elif roll > 3:
         "You found a few scraps of paper."
@@ -224,7 +259,7 @@ label action_check_outside:
     scene bg entrance
     show snow_effect
     "You look through the viewport."
-    $ warmth -= 5
+    $ warmth -= 10 # Increased penalty
     "The cold seeps through the glass, but the view is breathtakingly deadly."
     jump check_actions
 
@@ -284,7 +319,7 @@ label night_phase:
             "It's not enough fuel, but it's all we can spare."
 
     # Nightly decay
-    $ warmth -= 25 # Colder each night
+    $ warmth -= 35 # Increased from 25. Harder to survive.
     $ day += 1
     
     if day > max_days:
@@ -299,30 +334,18 @@ label night_phase:
 # --- Endings ---
 
 label ending_survival:
-    scene bg wasteland with fade
-    show snow_effect
     hide screen stats_overlay
     hide fire_overlay
-    "{b}The sun rises on the final day.{/b}"
-    "We are cold, hungry, and tired... but we are alive."
-    "The storm has passed."
-    "{size=50}GOOD ENDING{/size}"
+    call screen ending_display("SURVIVAL", "The storm has passed. We are cold, hungry, but alive.\nThe sun rises on a new day.", "images/bg_good_ending.png")
     return
 
 label ending_frozen:
-    scene bg shelter with fade
     hide screen stats_overlay
     hide fire_overlay
-    "The fire flickers and dies."
-    "{color=#00ffff}The cold rushes in, claiming us instantly.{/color}"
-    "{size=50}BAD ENDING - FROZEN{/size}"
+    call screen ending_display("FROZEN", "The fire dies. The cold claims you instantly.\nAnother monument to the winter.", "images/bg_bad_ending.png")
     return
 
 label ending_despair:
-    scene bg shelter
     hide screen stats_overlay
-    show elara sad
-    e "What's the point, Keeper?"
-    "Elara walks out into the snow."
-    "{size=50}BAD ENDING - GIVEN UP{/size}"
+    call screen ending_display("GIVEN UP", "Elara walks into the snow.\nWithout hope, there is no survival.", "images/bg_bad_ending.png")
     return
